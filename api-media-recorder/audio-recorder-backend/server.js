@@ -52,3 +52,12 @@ app.use(express.static(path.join(__dirname, "../frontend")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/audio-recorder.html"));
 });
+
+const fs = require("fs");
+
+app.get("/list-uploads", (req, res) => {
+  fs.readdir(path.join(__dirname, "uploads"), (err, files) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(files);
+  });
+});
