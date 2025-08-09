@@ -1,13 +1,11 @@
-# 🎤 Audio Recorder Portfolio
-
-Demo web thu âm bằng **MediaRecorder API** + Backend Node.js lưu file.
+# 🎤 Demo web thu âm bằng **MediaRecorder API** + Backend Node.js lưu file.
 
 ## 🚀 Demo
 - **Frontend**: [[GitHub Pages](https://<username>.github.io/audio-recorder-portfolio/frontend/)](https://mediarecorder-api-demo.onrender.com/)
 - **Backend API**: [[Render](https://audio-recorder-backend.onrender.com)](https://mediarecorder-api-demo.onrender.com/list-uploads)
 
 - > 💡 Bạn có thể mở link frontend, thử ghi âm và gửi API để thấy file được lưu trên server.
-📌 Tính năng chính
+- >📌 Tính năng chính
 🎙 Thu âm giọng nói bằng MediaRecorder API
 
 💾 Tải file về máy (format .webm)
