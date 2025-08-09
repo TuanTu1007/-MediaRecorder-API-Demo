@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>MediaRecorder API - Upload Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    audio {
+      margin-top: 20px;
+      width: 300px;
+    }
+
+    #status {
+      margin-top: 15px;
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>🎤 Thu Âm & Gửi API</h2>
+  <button id="startBtn">Bắt đầu ghi âm</button>
+  <button id="stopBtn" disabled>Dừng ghi âm</button>
+  <button id="downloadBtn" disabled>Tải file</button>
+  <button id="uploadBtn" disabled>Gửi API</button>
+
+  <audio id="audioPlayer" controls></audio>
+  <div id="status"></div>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioBlob;
+
+    // Bắt đầu ghi âm
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        document.getElementById("audioPlayer").src = audioUrl;
+        document.getElementById("downloadBtn").disabled = false;
+        document.getElementById("uploadBtn").disabled = false;
+      };
+
+      mediaRecorder.start();
+      document.getElementById("status").textContent = "⏺ Đang ghi âm...";
+      document.getElementById("startBtn").disabled = true;
+      document.getElementById("stopBtn").disabled = false;
+    });
+
+    // Dừng ghi âm
+    document.getElementById("stopBtn").addEventListener("click", () => {
+      mediaRecorder.stop();
+      document.getElementById("status").textContent = "✅ Đã ghi âm xong";
+      document.getElementById("startBtn").disabled = false;
+      document.getElementById("stopBtn").disabled = true;
+    });
+
+    // Tải file âm thanh
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(audioBlob);
+      a.download = "recorded-audio.webm";
+      a.click();
+    });
+
+    // Gửi dữ liệu lên API (demo)
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recorded-audio.webm");
+
+      document.getElementById("status").textContent = "📤 Đang gửi dữ liệu...";
+
+      try {
+        // API giả lập (httpbin.org sẽ trả lại thông tin nhận được)
+        const response = await fetch("http://localhost:5000/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const result = await response.json();
+        console.log(result); // Xem dữ liệu trả về trong console
+
+        if (response.ok) {
+          document.getElementById("status").textContent = "✅ Gửi dữ liệu thành công!";
+        } else {
+          document.getElementById("status").textContent = "❌ Gửi thất bại!";
+        }
+      } catch (error) {
+        document.getElementById("status").textContent = "⚠ Lỗi kết nối API!";
+      }
+    });
+  </script>
+</body>
+
+</html>
