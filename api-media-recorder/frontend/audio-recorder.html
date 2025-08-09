@@ -98,7 +98,7 @@
 
       try {
         // API giả lập (httpbin.org sẽ trả lại thông tin nhận được)
-        const response = await fetch("https://audio-recorder-backend.onrender.com/upload", {
+        const response = await fetch("/upload", {
           method: "POST",
           body: formData
         });
