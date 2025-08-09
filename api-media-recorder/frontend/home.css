@@ -1,0 +1,23 @@
+body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    audio {
+      margin-top: 20px;
+      width: 300px;
+    }
+
+    #status {
+      margin-top: 15px;
+      color: green;
+      font-weight: bold;
+    }
