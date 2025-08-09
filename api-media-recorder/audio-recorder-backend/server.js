@@ -47,10 +47,10 @@ app.listen(PORT, () => {
 });
 
 // Server frontend
-app.use(express.static(path.join(__dirname, "../../frontend")));
+app.use(express.static(path.join(__dirname, "../frontend")));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../../frontend/audio-recorder.html"));
+  res.sendFile(path.join(__dirname, "../frontend/audio-recorder.html"));
 });
 
 app.get("/list-uploads", (req, res) => {
