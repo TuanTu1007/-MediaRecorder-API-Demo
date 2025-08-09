@@ -1,26 +1,34 @@
-document.getElementById("uploadBtn").addEventListener("click", async () => {
-  if (!audioBlob) return;
+// upload.js
+import { state, statusDiv, getExtensionByMimeType } from './globals.js';
+
+export function uploadCurrentRecording() {
+  if (!state.audioBlob) return;
+  statusDiv.textContent = 'Đang gửi...';
 
   const formData = new FormData();
-  formData.append("audio", audioBlob, "recorded-audio.webm");
+  formData.append(
+    'file',
+    state.audioBlob,
+    `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(state.audioBlob.type)}`
+  );
 
-  document.getElementById("status").textContent = "📤 Đang gửi dữ liệu...";
-
-  try {
-    const response = await fetch("/upload", {
-      method: "POST",
-      body: formData
+  fetch('https://your-api-endpoint/upload', {
+    method: 'POST',
+    body: formData,
+  })
+    .then(res => {
+      if (res.ok) {
+        statusDiv.textContent = 'Gửi thành công!';
+      } else {
+        statusDiv.textContent = 'Gửi thất bại: ' + res.statusText;
+      }
+    })
+    .catch(err => {
+      statusDiv.textContent = 'Lỗi gửi API: ' + err.message;
     });
+}
 
-    const result = await response.json();
-    console.log(result);
-
-    if (response.ok) {
-      document.getElementById("status").textContent = "✅ Gửi dữ liệu thành công!";
-    } else {
-      document.getElementById("status").textContent = "❌ Gửi thất bại!";
-    }
-  } catch (error) {
-    document.getElementById("status").textContent = "⚠ Lỗi kết nối API!";
-  }
-});
+// Nếu bạn dùng nút upload chính, bind event
+export function bindUploadButton(uploadBtn) {
+  uploadBtn.onclick = uploadCurrentRecording;
+}

@@ -2,28 +2,317 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>MediaRecorder API - Upload Demo</title>
-  <link rel="stylesheet" href="./home.css">
+  <link rel="stylesheet" href="home.css">
 </head>
 
 <body>
   <h2>🎤 Thu Âm & Gửi API</h2>
-  <button id="startBtn">Bắt đầu ghi âm</button>
-  <button id="stopBtn" disabled>Dừng ghi âm</button>
-  <button id="downloadBtn" disabled>Tải file</button>
-  <button id="uploadBtn" disabled>Gửi API</button>
+
+  <label for="qualitySelect">Chọn chất lượng ghi âm:</label>
+  <select id="qualitySelect">
+    <option value="audio/webm;codecs=opus" selected>WebM Opus (mặc định)</option>
+    <option value="audio/wav">WAV (không nén)</option>
+    <option value="audio/mp3">MP3 (nếu trình duyệt hỗ trợ)</option>
+  </select>
+
+  <div>
+    <button id="startBtn">Bắt đầu ghi âm</button>
+    <button id="stopBtn" disabled>Dừng ghi âm</button>
+    <button id="downloadBtn" disabled>Tải file</button>
+    <button id="uploadBtn" disabled>Gửi API</button>
+  </div>
+
+  <div id="timer">00:00</div>
+
+  <canvas id="waveform"></canvas>
 
   <audio id="audioPlayer" controls></audio>
+
   <div id="status"></div>
 
-  <script src="js/globals.js"></script>
-  <script src="js/recorder.js"></script>
-  <script src="js/download.js"></script>
-  <script src="js/upload.js"></script>
+  <h3>Bản ghi hiện tại</h3>
+  <div id="recordingsList"></div>
 
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioBlob;
+    let audioUrl;
+    let audioPlayer = document.getElementById('audioPlayer');
+    let startBtn = document.getElementById('startBtn');
+    let stopBtn = document.getElementById('stopBtn');
+    let downloadBtn = document.getElementById('downloadBtn');
+    let uploadBtn = document.getElementById('uploadBtn');
+    let statusDiv = document.getElementById('status');
+    let timerDisplay = document.getElementById('timer');
+    let qualitySelect = document.getElementById('qualitySelect');
+    let recordingsList = document.getElementById('recordingsList');
+    let waveformCanvas = document.getElementById('waveform');
+    let canvasCtx = waveformCanvas.getContext('2d');
+    let audioContext, analyser, sourceNode, dataArray, animationId;
 
+    // Timer
+    let seconds = 0;
+    let timerInterval;
 
+    function updateTimer() {
+      seconds++;
+      let mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+      let secs = (seconds % 60).toString().padStart(2, '0');
+      timerDisplay.textContent = `${mins}:${secs}`;
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      seconds = 0;
+      timerDisplay.textContent = '00:00';
+    }
+
+    // Waveform visualizer
+    function initVisualizer(stream) {
+      audioContext = new AudioContext();
+      analyser = audioContext.createAnalyser();
+      sourceNode = audioContext.createMediaStreamSource(stream);
+      sourceNode.connect(analyser);
+      analyser.fftSize = 2048;
+      let bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+
+      drawWaveform();
+    }
+
+    function drawWaveform() {
+      animationId = requestAnimationFrame(drawWaveform);
+
+      analyser.getByteTimeDomainData(dataArray);
+
+      canvasCtx.fillStyle = '#222';
+      canvasCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeStyle = '#4caf50';
+
+      canvasCtx.beginPath();
+
+      let sliceWidth = waveformCanvas.width * 1.0 / dataArray.length;
+      let x = 0;
+
+      for (let i = 0; i < dataArray.length; i++) {
+        let v = dataArray[i] / 128.0;
+        let y = v * waveformCanvas.height / 2;
+
+        if (i === 0) {
+          canvasCtx.moveTo(x, y);
+        } else {
+          canvasCtx.lineTo(x, y);
+        }
+
+        x += sliceWidth;
+      }
+
+      canvasCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+      canvasCtx.stroke();
+    }
+
+    function stopVisualizer() {
+      cancelAnimationFrame(animationId);
+      if (audioContext) {
+        audioContext.close();
+      }
+      canvasCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+    }
+
+    // Resize canvas
+    function resizeCanvas() {
+      waveformCanvas.width = waveformCanvas.clientWidth;
+      waveformCanvas.height = waveformCanvas.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Start recording
+    startBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        resetTimer();
+        timerInterval = setInterval(updateTimer, 1000);
+
+        let selectedType = qualitySelect.value;
+        if (!MediaRecorder.isTypeSupported(selectedType)) {
+          statusDiv.textContent = `Định dạng ${selectedType} không được hỗ trợ, dùng mặc định WebM.`;
+          selectedType = 'audio/webm;codecs=opus';
+        }
+        mediaRecorder = new MediaRecorder(stream, { mimeType: selectedType });
+
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstart = () => {
+          statusDiv.textContent = 'Đang ghi âm...';
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          downloadBtn.disabled = true;
+          uploadBtn.disabled = true;
+          audioPlayer.src = '';
+          initVisualizer(stream);
+        };
+
+        mediaRecorder.onstop = () => {
+          audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+          audioUrl = URL.createObjectURL(audioBlob);
+          audioPlayer.src = audioUrl;
+          statusDiv.textContent = 'Đã dừng ghi âm.';
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+          downloadBtn.disabled = false;
+          uploadBtn.disabled = false;
+          clearInterval(timerInterval);
+          stopVisualizer();
+
+          // Thêm bản ghi vào danh sách
+          addRecordingToList(audioBlob);
+        };
+
+        mediaRecorder.start();
+      } catch (err) {
+        statusDiv.textContent = 'Lỗi khi lấy microphone hoặc không được phép: ' + err.message;
+      }
+    };
+
+    // Stop recording
+    stopBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    };
+
+    // Download recording
+    downloadBtn.onclick = () => {
+      if (!audioBlob) return;
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = audioUrl;
+      a.download = `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(audioBlob.type)}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+
+    // Upload recording
+    uploadBtn.onclick = () => {
+      if (!audioBlob) return;
+      statusDiv.textContent = 'Đang gửi...';
+
+      const formData = new FormData();
+      formData.append('file', audioBlob, `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(audioBlob.type)}`);
+
+      fetch('https://your-api-endpoint/upload', {
+        method: 'POST',
+        body: formData
+      }).then(res => {
+        if (res.ok) {
+          statusDiv.textContent = 'Gửi thành công!';
+        } else {
+          statusDiv.textContent = 'Gửi thất bại: ' + res.statusText;
+        }
+      }).catch(err => {
+        statusDiv.textContent = 'Lỗi gửi API: ' + err.message;
+      });
+    };
+
+    // Danh sách bản ghi
+    let recordings = [];
+
+    function addRecordingToList(blob) {
+      const id = Date.now();
+      recordings.push({ id, blob, url: URL.createObjectURL(blob) });
+      renderRecordingsList();
+    }
+
+    function renderRecordingsList() {
+      recordingsList.innerHTML = '';
+      recordings.forEach((rec, index) => {  // lấy thêm index
+        const div = document.createElement('div');
+        div.className = 'recording-item';
+
+        // Thêm tên với thứ tự
+        const title = document.createElement('div');
+        title.textContent = `Bản ghi ${index + 1}`;  // +1 để bắt đầu từ 1
+        title.style.fontWeight = 'bold';
+        title.style.marginBottom = '5px';
+
+        const audioEl = document.createElement('audio');
+        audioEl.controls = true;
+        audioEl.src = rec.url;
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'recording-actions';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Xóa';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.onclick = () => {
+          URL.revokeObjectURL(rec.url);
+          recordings = recordings.filter(r => r.id !== rec.id);
+          renderRecordingsList();
+        };
+
+        const uploadBtn = document.createElement('button');
+        uploadBtn.textContent = 'Gửi API';
+        uploadBtn.className = 'upload-btn';
+        uploadBtn.onclick = () => {
+          uploadRecording(rec);
+        };
+
+        actionsDiv.appendChild(uploadBtn);
+        actionsDiv.appendChild(deleteBtn);
+
+        div.appendChild(title);      
+        div.appendChild(audioEl);
+        div.appendChild(actionsDiv);
+
+        recordingsList.appendChild(div);
+      });
+    }
+
+    function uploadRecording(recording) {
+      statusDiv.textContent = `Đang gửi bản ghi ${new Date(recording.id).toLocaleTimeString()}...`;
+
+      const formData = new FormData();
+      formData.append('file', recording.blob, `recording_${new Date(recording.id).toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(recording.blob.type)}`);
+
+      fetch('https://your-api-endpoint/upload', {
+        method: 'POST',
+        body: formData
+      }).then(res => {
+        if (res.ok) {
+          statusDiv.textContent = 'Gửi thành công bản ghi!';
+        } else {
+          statusDiv.textContent = 'Gửi thất bại: ' + res.statusText;
+        }
+      }).catch(err => {
+        statusDiv.textContent = 'Lỗi gửi API: ' + err.message;
+      });
+    }
+
+    function getExtensionByMimeType(mime) {
+      switch (mime) {
+        case 'audio/webm':
+        case 'audio/webm;codecs=opus':
+          return 'webm';
+        case 'audio/wav':
+          return 'wav';
+        case 'audio/mpeg':
+          return 'mp3';
+        default:
+          return 'wav';
+      }
+    }
+  </script>
 </body>
 
 </html>
