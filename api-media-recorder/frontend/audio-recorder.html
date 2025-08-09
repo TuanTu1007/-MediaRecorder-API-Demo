@@ -285,7 +285,7 @@
       const formData = new FormData();
       formData.append('file', recording.blob, `recording_${new Date(recording.id).toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(recording.blob.type)}`);
 
-      fetch('https://your-api-endpoint/upload', {
+      fetch('/upload', {
         method: 'POST',
         body: formData
       }).then(res => {
