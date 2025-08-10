@@ -58,8 +58,25 @@ app.get("/", (req, res) => {
 });
 
 app.get("/list-uploads", (req, res) => {
-  fs.readdir(path.join(__dirname, "uploads"), (err, files) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(files);
+  const uploadDir = path.join(__dirname, "uploads");
+
+  fs.readdir(uploadDir, (err, files) => {
+    if (err) {
+      return res.status(500).send("Lỗi đọc thư mục uploads");
+    }
+
+    let html = `
+      <h2>Danh sách file âm thanh đã được gửi</h2>
+      <ul>
+    `;
+
+    files.forEach(file => {
+      // Tạo link để tải/nghe file
+      html += `<li><a href="/uploads/${encodeURIComponent(file)}" target="_blank">${file}</a></li>`;
+    });
+
+    html += '</ul>';
+
+    res.send(html);
   });
 });
