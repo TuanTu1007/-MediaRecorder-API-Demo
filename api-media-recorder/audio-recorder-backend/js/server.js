@@ -23,7 +23,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET','POST','PUT','DELETE'],
+  allowedHeaders: ['Content-Type']
+}));
 
 // Route upload
 app.post("/upload", upload.single("audio"), (req, res) => {

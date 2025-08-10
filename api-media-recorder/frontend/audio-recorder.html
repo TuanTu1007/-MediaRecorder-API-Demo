@@ -208,9 +208,9 @@
       statusDiv.textContent = 'Đang gửi...';
 
       const formData = new FormData();
-      formData.append('file', audioBlob, `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(audioBlob.type)}`);
+      formData.append('audio', audioBlob, `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(audioBlob.type)}`);
 
-      fetch('https://your-api-endpoint/upload', {
+      fetch('https://mediarecorder-api-demo.onrender.com/upload', {
         method: 'POST',
         body: formData
       }).then(res => {
@@ -271,7 +271,7 @@
         actionsDiv.appendChild(uploadBtn);
         actionsDiv.appendChild(deleteBtn);
 
-        div.appendChild(title);      
+        div.appendChild(title);
         div.appendChild(audioEl);
         div.appendChild(actionsDiv);
 
@@ -285,7 +285,7 @@
       const formData = new FormData();
       formData.append('file', recording.blob, `recording_${new Date(recording.id).toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(recording.blob.type)}`);
 
-      fetch('https://mediarecorder-api-demo.onrender.com/list-uploads', {
+      fetch('https://mediarecorder-api-demo.onrender.com/upload', {
         method: 'POST',
         body: formData
       }).then(res => {
