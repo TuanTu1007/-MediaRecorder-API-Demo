@@ -13,7 +13,7 @@ if (!fs.existsSync(uploadDir)) {
 // Cấu hình multer để lưu file vào uploads/
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname) || ".webm";
