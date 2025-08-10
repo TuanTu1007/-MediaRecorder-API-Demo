@@ -215,7 +215,7 @@
         body: formData
       }).then(res => {
         if (res.ok) {
-          statusDiv.textContent = 'Gửi thành công!';
+          statusDiv.textContent = 'Gửi thành công! Truy cập https://mediarecorder-api-demo.onrender.com/list-uploads';
         } else {
           statusDiv.textContent = 'Gửi thất bại: ' + res.statusText;
         }
@@ -283,7 +283,7 @@
       statusDiv.textContent = `Đang gửi bản ghi ${new Date(recording.id).toLocaleTimeString()}...`;
 
       const formData = new FormData();
-      formData.append('file', recording.blob, `recording_${new Date(recording.id).toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(recording.blob.type)}`);
+      formData.append('audio', recording.blob, `recording_${new Date(recording.id).toISOString().replace(/[:.]/g, '-')}.${getExtensionByMimeType(recording.blob.type)}`);
 
       fetch('https://mediarecorder-api-demo.onrender.com/upload', {
         method: 'POST',
